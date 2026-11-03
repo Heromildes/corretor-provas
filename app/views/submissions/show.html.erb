@@ -1,0 +1,44 @@
+<% content_for :title, @submission.display_name %>
+<% breadcrumbs([ "Turmas", root_path ], [ @batch.name, batch_path(@batch) ], [ @submission.display_name ]) %>
+<%= turbo_stream_from @submission %>
+
+<header class="cw-mshead" data-controller="hotkeys">
+  <div class="cw-mshead__main">
+    <div class="cw-mshead__eyebrow">
+      <span class="cw-mhead__icon cw-mhead__icon--xs cw-mhead__icon--tone" style="--tone: var(--cw-gold-strong)"><%= icon(:file_text) %></span>
+      <%= @batch.name %>
+    </div>
+    <%= form_with model: @submission, class: "no-print", data: { controller: "autosubmit", action: "input->autosubmit#queue focusout->autosubmit#now keydown.enter->autosubmit#blur:prevent" } do |f| %>
+      <label class="sr-only" for="submission_student_name">Nome do aluno</label>
+      <%= f.text_field :student_name, value: @submission.student_name.presence || @submission.display_name, placeholder: "Nome do aluno",
+            class: "cw-title-input", title: "Clique para editar o nome" %>
+    <% end %>
+    <h1 class="cw-mshead__title hidden print:block"><%= @submission.display_name %></h1>
+    <%= render "submissions/header", submission: @submission %>
+  </div>
+
+  <div class="cw-mshead__actions no-print">
+    <span class="cw-nav-pair">
+      <%= link_to(@previous_id ? submission_path(@previous_id) : "#", class: [ "cw-btn cw-btn--ghost cw-btn--icon", ("is-disabled" unless @previous_id) ], title: "Aluno anterior (←)", "aria-label": "Aluno anterior", data: { hotkeys_target: "previous" }) do %><%= icon(:chevron_left) %><% end %>
+      <%= link_to(@next_id ? submission_path(@next_id) : "#", class: [ "cw-btn cw-btn--ghost cw-btn--icon", ("is-disabled" unless @next_id) ], title: "Próximo aluno (→)", "aria-label": "Próximo aluno", data: { hotkeys_target: "next" }) do %><%= icon(:chevron_right) %><% end %>
+    </span>
+    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" onclick="window.print()"><%= icon(:print) %> Imprimir</button>
+    <%= button_to regrade_submission_path(@submission), class: "cw-btn cw-btn--teal-outline cw-btn--sm",
+          form: { data: { turbo_confirm: "Corrigir esta prova de novo com a IA? Os ajustes manuais serão perdidos." } } do %><%= icon(:refresh) %> Recorrigir<% end %>
+  </div>
+</header>
+
+<div class="cw-show-grid" data-controller="viewer">
+  <aside class="cw-show-grid__aside cw-show-grid__aside--split">
+    <div class="cw-split-first"><%= render "submissions/summary", submission: @submission %></div>
+    <div class="cw-split-last no-print" style="display:flex;min-height:0;flex:1 1 auto"><%= render "submissions/pages", submission: @submission %></div>
+  </aside>
+
+  <div class="min-w-0">
+    <%= render "submissions/body", submission: @submission %>
+  </div>
+
+  <dialog class="cw-lightbox" data-viewer-target="lightbox" data-action="click->viewer#closeLightbox">
+    <img data-viewer-target="lightboxImage" alt="Página ampliada">
+  </dialog>
+</div>

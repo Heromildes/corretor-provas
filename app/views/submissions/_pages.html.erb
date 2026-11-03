@@ -1,0 +1,22 @@
+<div id="submission_pages" class="cw-pages" style="width:100%">
+  <div class="cw-pages__head">
+    <span class="cw-ico-text"><%= icon(:file_text) %> Prova original</span>
+    <% if submission.file.attached? %>
+      <%= link_to rails_blob_path(submission.file, disposition: "inline"), target: "_blank", rel: "noopener", class: "cw-link-btn" do %>Abrir arquivo <%= icon(:arrow_right) %><% end %>
+    <% end %>
+  </div>
+  <div class="cw-pages__scroll" data-viewer-target="scroller">
+    <% if submission.pages.attached? %>
+      <% submission.pages.each_with_index do |page, index| %>
+        <button type="button" class="cw-page-thumb" data-viewer-target="page" data-page="<%= index + 1 %>" data-action="viewer#zoom" data-src="<%= rails_blob_path(page, disposition: "inline") %>" aria-label="Ampliar página <%= index + 1 %>">
+          <img src="<%= rails_blob_path(page, disposition: "inline") %>" alt="Página <%= index + 1 %>" loading="lazy">
+          <span>Pág. <%= index + 1 %></span>
+        </button>
+      <% end %>
+    <% elsif submission.failed? %>
+      <p class="cw-text-muted" style="padding:3rem 1rem;text-align:center;font-size:.85rem">Não foi possível gerar a visualização.</p>
+    <% else %>
+      <span class="cw-skel" style="display:block;width:100%;aspect-ratio:1/1.414"></span>
+    <% end %>
+  </div>
+</div>

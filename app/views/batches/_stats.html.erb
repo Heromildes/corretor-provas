@@ -1,0 +1,29 @@
+<% stats = batch.stats %>
+<div id="batch_stats" class="cw-msummary">
+  <div class="cw-msummary__label">Média da turma</div>
+  <div class="cw-msummary__big"><%= points(stats.average) %><% if stats.average %> <small>/100</small><% end %></div>
+  <% if stats.average %>
+    <div class="mt-1"><%= concept_status(Grading.concept_for(stats.average), long: true) %></div>
+  <% end %>
+
+  <div class="cw-msummary__bar" title="<%= stats.progress %>% corrigidas"><span style="width: <%= stats.progress %>%"></span></div>
+  <div class="flex justify-between text-[0.78rem] cw-text-muted">
+    <span><%= stats.done %> de <%= stats.total %> corrigidas</span>
+    <% if stats.processing.positive? %>
+      <%= status_dot("#{stats.processing} em andamento", :info, live: true, class: "text-[0.78rem]!") %>
+    <% elsif stats.finished? && stats.failed.zero? %>
+      <%= status_dot("Tudo pronto", :success, class: "text-[0.78rem]!") %>
+    <% end %>
+  </div>
+
+  <dl class="cw-mdl">
+    <%= render "batches/extreme", label: "Maior nota", icon_name: :award, score: stats.highest, students: stats.top %>
+    <%= render "batches/extreme", label: "Menor nota", icon_name: :chart, score: stats.lowest, students: stats.bottom %>
+    <% if stats.failed.positive? %>
+      <div><dt class="cw-ico-text cw-text-danger"><%= icon(:circle_alert) %> Com falha</dt><dd class="cw-text-danger"><%= stats.failed %></dd></div>
+    <% end %>
+    <% Grading::CONCEPTS.reverse.each do |c| %>
+      <div><dt><%= status_dot("#{c[:code]} · #{c[:label]}", concept_tone(c[:code])) %></dt><dd><%= stats.distribution[c[:code]] %></dd></div>
+    <% end %>
+  </dl>
+</div>

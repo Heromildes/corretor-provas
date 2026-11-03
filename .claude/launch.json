@@ -1,0 +1,27 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "corretor",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "PORT=3100 bin/dev"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "corretor-demo",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "PORT=3100 OPENAI_FAKE_RESPONSE=test/fixtures/files/openai_response_full.json OPENAI_FAKE_DELAY=4 bin/dev"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "corretor-attach",
+      "url": "http://localhost:3100"
+    }
+  ]
+}

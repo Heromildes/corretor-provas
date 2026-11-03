@@ -1,0 +1,20 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="application-name" content="Corretor">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<%= csrf_meta_tags %>
+<%= csp_meta_tag %>
+<%# Tema antes de pintar a página (claro é o padrão; a escolha no botão fica salva). %>
+<script>
+  (function () {
+    var theme = "light";
+    try { theme = localStorage.getItem("cw-theme") || "light"; } catch (e) {}
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  })();
+</script>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+<%= javascript_importmap_tags %>

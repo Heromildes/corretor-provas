@@ -1,0 +1,4 @@
+professora:
+  name: Sandy Metz
+  email: professora@escola.test
+  encrypted_password: <%= Devise::Encryptor.digest(User, "senha-de-teste-123") %>

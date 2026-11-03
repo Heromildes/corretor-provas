@@ -1,0 +1,10 @@
+<details class="cw-menu cw-reveal" data-controller="menu">
+  <summary class="cw-dots" aria-label="Ações da turma <%= batch.name %>"><%= icon(:more) %></summary>
+  <div class="cw-menu__panel">
+    <%= link_to batch, class: "cw-menu__item" do %><%= icon(:eye) %> Abrir<% end %>
+    <%= link_to batch_path(batch, format: :csv), class: "cw-menu__item", data: { turbo: false } do %><%= icon(:download) %> Exportar notas<% end %>
+    <div class="cw-menu__sep"></div>
+    <%= button_to batch, method: :delete, class: "cw-menu__item cw-menu__item--danger",
+          form: { data: { turbo_confirm: "Excluir a turma \"#{batch.name}\" e todas as provas?" } } do %><%= icon(:trash) %> Excluir<% end %>
+  </div>
+</details>

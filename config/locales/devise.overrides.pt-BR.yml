@@ -1,0 +1,12 @@
+pt-BR:
+  devise:
+    failure:
+      unauthenticated: "Para continuar, faça login."
+      invalid: "E-mail ou senha inválidos."
+      not_found_in_database: "E-mail ou senha inválidos."
+      locked: "Sua conta foi bloqueada por excesso de tentativas. Tente de novo em 30 minutos."
+      last_attempt: "Atenção: mais uma tentativa errada e a conta será bloqueada por 30 minutos."
+    sessions:
+      signed_in: "Login realizado."
+      signed_out: "Você saiu."
+      already_signed_out: "Você saiu."

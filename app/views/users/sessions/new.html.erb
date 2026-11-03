@@ -1,0 +1,43 @@
+<% content_for :title, "Entrar" %>
+<% name = ENV.fetch("LOGIN_GREETING_NAME", "Sandy") %>
+
+<%# Corações e gatinhos flutuando nas laterais (posições fixas para não pular a cada carregamento e não cobrir o formulário). %>
+<div class="cw-float" aria-hidden="true">
+  <% %w[💖 🐱 💕 😺 🌸 💗 🐈 💞 😻 ✨ 💓 🐾 💖 🐱 💕 😸 🌷 💗].each_with_index do |emoji, i| %>
+    <span style="left: <%= i.even? ? (i * 37 + 3) % 27 : 71 + (i * 37 + 3) % 26 %>%; font-size: <%= 1.1 + (i * 7 % 5) * 0.35 %>rem; animation-duration: <%= 11 + (i * 5 % 9) %>s; animation-delay: -<%= (i * 13 % 17) %>s; --sway: <%= i.even? ? 22 : -22 %>px; --i: <%= (i * 29 + 5) % 90 %>"><%= emoji %></span>
+  <% end %>
+</div>
+
+<div class="cw-auth__card">
+  <h1 class="cw-auth__title">Bem-vinda, <span class="cw-auth__name"><%= name %></span> <span class="cw-auth__cat" aria-hidden="true">😺</span></h1>
+
+  <div class="cw-auth__panel">
+    <%= form_for resource, as: resource_name, url: session_path(resource_name), html: { class: "cw-form", data: { turbo: false } } do |f| %>
+      <% if (message = flash[:alert].presence) && message == t("devise.failure.unauthenticated") %>
+        <div class="cw-alert cw-alert--info" role="status"><%= icon(:lock) %><span><%= message %></span></div>
+      <% elsif message %>
+        <div class="cw-alert" role="alert"><%= icon(:circle_alert) %><span><%= message %></span></div>
+      <% elsif (message = flash[:notice].presence) %>
+        <div class="cw-alert cw-alert--info" role="status"><%= icon(:circle_check) %><span><%= message %></span></div>
+      <% end %>
+
+      <div>
+        <%= f.label :email, "E-mail", class: "cw-label" %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "username", required: true, class: "cw-input", placeholder: "voce@escola.com.br" %>
+      </div>
+
+      <div>
+        <%= f.label :password, "Senha", class: "cw-label" %>
+        <%= f.password_field :password, autocomplete: "current-password", required: true, class: "cw-input" %>
+      </div>
+
+      <label class="cw-check">
+        <%= f.check_box :remember_me %> Manter login neste computador
+      </label>
+
+      <%= button_tag type: "submit", class: "cw-btn cw-btn--teal cw-btn--block" do %>Entrar <%= icon(:arrow_right) %><% end %>
+    <% end %>
+  </div>
+
+  <p class="cw-auth__foot">Feito para a Profe com o olhar mais lindo do mundo ;)</p>
+</div>

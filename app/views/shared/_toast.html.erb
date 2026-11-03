@@ -1,0 +1,4 @@
+<div class="cw-toast <%= 'cw-toast--alert' if type.to_s == 'alert' %>" data-controller="toast" role="status">
+  <%= icon(type.to_s == "alert" ? :circle_alert : :circle_check) %>
+  <span><%= message %></span>
+</div>

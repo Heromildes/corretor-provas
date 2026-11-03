@@ -1,0 +1,46 @@
+<li id="<%= dom_id(submission) %>" class="cw-grow" data-concept="<%= submission.concept if submission.done? %>" data-controller="row-link" data-row-link-url-value="<%= submission_path(submission) %>" data-action="click->row-link#open">
+  <div class="cw-mitem">
+    <span class="cw-mitem__icon" style="--tone: <%= tone_var(submission_tone(submission)) %>"><%= icon(submission.failed? ? :circle_alert : :file_text) %></span>
+    <div class="cw-mitem__text">
+      <%= link_to submission.display_name, submission, class: "cw-mname" %>
+      <% if submission.failed? && submission.error_message.present? %>
+        <span class="cw-msub cw-text-danger" title="<%= submission.error_message %>"><%= submission.error_message %></span>
+      <% else %>
+        <span class="cw-msub"><%= submission.original_filename %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="cw-gmeta">
+    <div class="cw-gcell"><%= submission_status(submission) %></div>
+    <% if submission.done? %>
+      <div class="cw-gcell cw-gcell--wide cw-gcell--num tabular"><%= points(submission.section_points("table")) %><span class="cw-text-muted">/40</span></div>
+      <div class="cw-gcell cw-gcell--wide cw-gcell--num tabular"><%= points(submission.section_points("open")) %><span class="cw-text-muted">/60</span></div>
+      <div class="cw-gcell cw-gcell--num"><span class="cw-score"><%= points(submission.total_score) %></span></div>
+      <div class="cw-gcell"><%= concept_status(submission.concept) %></div>
+    <% elsif submission.processing? %>
+      <div class="cw-gcell cw-gcell--wide"></div><div class="cw-gcell cw-gcell--wide"></div>
+      <div class="cw-gcell cw-gcell--num"><span class="cw-skel" style="width:2.25rem;height:0.9rem"></span></div>
+      <div class="cw-gcell"><span class="cw-skel" style="width:2rem;height:0.9rem"></span></div>
+    <% else %>
+      <div class="cw-gcell cw-gcell--wide"></div><div class="cw-gcell cw-gcell--wide"></div>
+      <div class="cw-gcell cw-gcell--num cw-text-muted">—</div><div class="cw-gcell cw-text-muted">—</div>
+    <% end %>
+  </div>
+
+  <div class="cw-gmenu">
+    <details class="cw-menu cw-reveal" data-controller="menu">
+      <summary class="cw-dots" aria-label="Ações de <%= submission.display_name %>"><%= icon(:more) %></summary>
+      <div class="cw-menu__panel">
+        <%= link_to submission, class: "cw-menu__item" do %><%= icon(:eye) %> Abrir correção<% end %>
+        <% unless submission.processing? %>
+          <%= button_to regrade_submission_path(submission), class: "cw-menu__item",
+                form: { data: { turbo_confirm: (submission.adjusted_by_teacher? ? "Corrigir de novo? Os ajustes manuais serão perdidos." : nil) } } do %><%= icon(:refresh) %> <%= submission.failed? ? "Tentar de novo" : "Recorrigir" %><% end %>
+        <% end %>
+        <div class="cw-menu__sep"></div>
+        <%= button_to submission, method: :delete, class: "cw-menu__item cw-menu__item--danger",
+              form: { data: { turbo_confirm: "Remover a prova de #{submission.display_name}?" } } do %><%= icon(:trash) %> Remover<% end %>
+      </div>
+    </details>
+  </div>
+</li>

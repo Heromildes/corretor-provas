@@ -1,0 +1,24 @@
+<div id="submission_summary" class="cw-msummary">
+  <div class="cw-msummary__label">Nota</div>
+  <% if submission.done? %>
+    <div class="cw-msummary__big"><%= points(submission.total_score) %> <small>/100</small></div>
+    <div class="mt-1"><%= concept_status(submission.concept, long: true) %></div>
+    <div class="cw-msummary__bar"><span style="width: <%= percent(submission.total_score, 100) %>%; background: <%= tone_var(concept_tone(submission.concept)) %>"></span></div>
+    <dl class="cw-mdl">
+      <% submission.activity.sections.each do |kind, rubric| %>
+        <% max = rubric.sum { _1[:max_points].to_d } %>
+        <div>
+          <dt class="cw-ico-text"><%= icon(kind == "table" ? :layers : :pencil) %> <%= kind == "table" ? "Tabela de habilidades" : "Perguntas pessoais" %></dt>
+          <dd><%= points(submission.section_points(kind)) %><span class="cw-text-muted">/<%= points(max) %></span></dd>
+        </div>
+      <% end %>
+      <div><dt class="cw-ico-text"><%= icon(:circle_alert) %> Erros apontados</dt><dd><%= submission.items.sum { _1.issue_list.count { |i| i[:quote].present? } } %></dd></div>
+    </dl>
+  <% elsif submission.processing? %>
+    <div class="cw-msummary__big"><span class="cw-skel" style="width:5rem;height:2.2rem"></span></div>
+    <div class="mt-2"><%= submission_status(submission) %></div>
+  <% else %>
+    <div class="cw-msummary__big cw-text-muted">—</div>
+    <div class="mt-1"><%= submission_status(submission) %></div>
+  <% end %>
+</div>

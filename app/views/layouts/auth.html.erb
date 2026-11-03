@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <title><%= content_for(:title) || "Entrar" %> · Corretor</title>
+    <%= render "layouts/head" %>
+  </head>
+  <body class="cw-v2">
+    <div class="cw-auth">
+      <button type="button" class="cw-btn cw-btn--ghost cw-btn--icon" style="position:fixed;top:1rem;right:1rem" data-controller="theme" data-action="theme#toggle" aria-label="Alternar tema claro/escuro">
+        <span class="hidden dark:inline"><%= icon(:sun) %></span><span class="dark:hidden"><%= icon(:moon) %></span>
+      </button>
+      <%= yield %>
+    </div>
+  </body>
+</html>

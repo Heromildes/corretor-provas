@@ -1,0 +1,5 @@
+<span class="cw-dist">
+  <% stats.distribution.each do |code, count| %>
+    <%= status_dot(safe_join([ code, " ", tag.b(count) ]), concept_tone(code), title: Grading.label_for(code)) %>
+  <% end %>
+</span>

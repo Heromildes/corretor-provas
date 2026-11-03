@@ -1,0 +1,13 @@
+<div id="submission_header" class="cw-mshead__meta">
+  <%= submission_status(submission) %>
+  <span class="cw-mshead__sep">·</span>
+  <span class="cw-ico-text"><%= icon(:files) %> <%= submission.original_filename %></span>
+  <% if submission.graded_at %>
+    <span class="cw-mshead__sep">·</span>
+    <span class="cw-ico-text"><%= icon(:calendar) %> Corrigida em <%= l(submission.graded_at, format: "%d/%m às %H:%M") %></span>
+  <% end %>
+  <% if submission.done? && submission.adjusted_by_teacher? %>
+    <span class="cw-mshead__sep">·</span>
+    <%= status_dot("Ajustada pela professora", :purple) %>
+  <% end %>
+</div>

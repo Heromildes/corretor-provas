@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "./cw-v2.css";
+
+/* Tema pela classe .dark no <html> (escuro é o padrão; ver layouts/_theme_script). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}

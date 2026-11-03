@@ -1,0 +1,86 @@
+<% content_for :title, @batch.name %>
+<% breadcrumbs([ "Turmas", root_path ], [ @batch.name ]) %>
+<%= turbo_stream_from @batch, :submissions %>
+
+<header class="cw-mshead">
+  <div class="cw-mshead__main">
+    <div class="cw-mshead__eyebrow">
+      <span class="cw-mhead__icon cw-mhead__icon--xs cw-mhead__icon--tone" style="--tone: var(--cw-gold-strong)"><%= icon(:book) %></span>
+      <%= @batch.activity.subject.presence || "Atividade" %>
+    </div>
+    <h1 class="cw-mshead__title"><%= @batch.name %></h1>
+    <div class="cw-mshead__meta">
+      <span class="cw-ico-text"><%= icon(:file_text) %> <%= @batch.activity.name %></span>
+      <span class="cw-mshead__sep">·</span>
+      <span class="cw-ico-text"><%= icon(:award) %> <%= @batch.activity.total_points.to_i %> pontos</span>
+      <span class="cw-mshead__sep">·</span>
+      <span class="cw-ico-text"><%= icon(:calendar) %> <%= l(@batch.created_at.to_date, format: :long) %></span>
+    </div>
+  </div>
+  <div class="cw-mshead__actions">
+    <%= link_to batch_path(@batch, format: :csv), class: "cw-btn cw-btn--ghost cw-btn--sm", data: { turbo: false } do %><%= icon(:download) %> Exportar notas<% end %>
+    <details class="cw-menu" data-controller="menu">
+      <summary class="cw-dots" aria-label="Mais ações"><%= icon(:more) %></summary>
+      <div class="cw-menu__panel">
+        <%= button_to @batch, method: :delete, class: "cw-menu__item cw-menu__item--danger",
+              form: { data: { turbo_confirm: "Excluir a turma \"#{@batch.name}\" e todas as provas?" } } do %><%= icon(:trash) %> Excluir turma<% end %>
+      </div>
+    </details>
+  </div>
+</header>
+
+<div class="cw-show-grid">
+  <aside class="cw-show-grid__aside cw-show-grid__aside--first">
+    <%= render "batches/stats", batch: @batch %>
+  </aside>
+
+  <div class="min-w-0">
+    <%# Permanente para não perder o progresso dos uploads durante as atualizações ao vivo (id único por turma). %>
+    <div id="<%= dom_id(@batch, :dropzone) %>" data-turbo-permanent
+         data-controller="dropzone"
+         data-dropzone-url-value="<%= batch_submissions_path(@batch) %>"
+         data-action="dragenter->dropzone#enter dragover->dropzone#over dragleave->dropzone#leave drop->dropzone#drop">
+      <label class="cw-drop" data-dropzone-target="zone">
+        <%= icon(:upload) %>
+        <span class="cw-drop__title">Arraste as provas aqui</span>
+        <span class="cw-drop__hint">ou <u>escolha os arquivos</u> · PDF, JPG, PNG ou HEIC · um arquivo por aluno, vários de uma vez</span>
+        <input type="file" multiple class="sr-only" data-dropzone-target="input" data-action="change->dropzone#pick"
+               accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif">
+      </label>
+      <ul class="cw-uploads" data-dropzone-target="list"></ul>
+    </div>
+
+    <section class="cw-msection" data-controller="concept-filter">
+      <div class="cw-msection-head">
+        <h2>Alunos <small data-concept-filter-target="total"><%= @submissions.size %></small></h2>
+        <div class="cw-seg" role="group" aria-label="Filtrar por conceito">
+          <button type="button" aria-pressed="true" data-concept-filter-target="option" data-concept="" data-action="concept-filter#pick">
+            Todos <b data-count=""><%= @submissions.size %></b>
+          </button>
+          <% Grading::CONCEPTS.each_with_index do |c, i| %>
+            <% range = "#{c[:min]}–#{i.zero? ? 100 : Grading::CONCEPTS[i - 1][:min] - 1}" %>
+            <button type="button" aria-pressed="false" data-concept-filter-target="option" data-concept="<%= c[:code] %>" data-action="concept-filter#pick"
+                    style="--tone: <%= tone_var(concept_tone(c[:code])) %>" title="<%= c[:label] %> (<%= range %>)">
+              <span class="cw-seg__dot"></span><%= c[:code] %> <b data-count="<%= c[:code] %>"><%= @submissions.count { _1.done? && _1.concept == c[:code] } %></b>
+            </button>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="cw-mlist">
+        <div class="cw-ghead" aria-hidden="true">
+          <span>Aluno(a)</span><span>Status</span>
+          <span class="cw-gcell--wide cw-gcell--num">Tabela</span><span class="cw-gcell--wide cw-gcell--num">Pessoais</span>
+          <span class="cw-gcell--num">Nota</span><span>Conceito</span><span></span>
+        </div>
+        <ul id="submissions" class="cw-glist" data-controller="arrive" data-concept-filter-target="list"><%= render partial: "submissions/row", collection: @submissions, as: :submission %></ul>
+        <p class="cw-filter-empty" data-concept-filter-target="empty" hidden>Nenhum aluno com <b data-concept-filter-target="emptyLabel"></b> nesta turma.</p>
+        <div class="cw-empty">
+          <span class="cw-empty__icon"><%= icon(:upload) %></span>
+          <h3 class="cw-empty__title">Nenhuma prova enviada</h3>
+          <p class="cw-empty__text">Arraste os arquivos acima. Cada aluno aparece aqui na hora e a nota surge quando a IA termina.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

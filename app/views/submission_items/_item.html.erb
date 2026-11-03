@@ -1,0 +1,62 @@
+<% issues = item.issue_list %>
+<% tone = ratio_tone(item.ratio) %>
+<article id="<%= dom_id(item) %>" class="cw-mcard" data-controller="issues">
+  <div class="cw-mcard__head">
+    <div class="min-w-0">
+      <div class="cw-mcard__kicker">
+        <%= item.table? ? "Habilidade" : "Pergunta pessoal" %>
+        <% if item.page_number %>
+          · <button type="button" class="cw-link-btn cw-link-btn--muted no-print" style="font-size:inherit" data-action="viewer#gotoPage" data-page="<%= item.page_number %>">pág. <%= item.page_number %></button>
+        <% end %>
+      </div>
+      <h3 class="cw-mcard__title"><%= item.title %></h3>
+    </div>
+    <div class="cw-mcard__score"><%= points(item.effective_points) %><small>/<%= points(item.max_points) %></small></div>
+  </div>
+  <div class="cw-mcard__bar"><span style="width: <%= (item.ratio * 100).round(1) %>%; --tone: <%= tone_var(tone) %>"></span></div>
+
+  <%= highlight_transcription(item) %>
+
+  <% if item.feedback.present? %>
+    <p class="cw-mnote"><%= item.feedback %></p>
+  <% end %>
+  <% if item.strengths.present? %>
+    <p class="cw-mnote cw-mnote--ok"><%= icon(:check) %><span><%= item.strengths %></span></p>
+  <% end %>
+
+  <% if issues.any? %>
+    <details class="cw-fixes" <%= "open" unless item.table? && issues.size > 3 %>>
+      <summary><%= icon(:chevron_right) %> O que ajustar <span class="cw-text-muted tabular"><%= issues.size %></span></summary>
+      <ul>
+        <% issues.each_with_index do |issue, index| %>
+          <li id="<%= dom_id(item) %>_issue_<%= index %>" class="cw-fix" data-issues-target="row" data-action="mouseenter->issues#activate mouseleave->issues#deactivate">
+            <span class="cw-fix__dot" style="--dot: <%= tone_var(issue_tone(issue[:kind])) %>" title="<%= SubmissionItem::ISSUE_KINDS[issue[:kind]] %>"></span>
+            <span>
+              <% if issue[:quote].present? %><span class="cw-fix__from"><%= issue[:quote] %></span><% end %>
+              <% if issue[:suggestion].present? %><span class="cw-fix__to"> → <%= issue[:suggestion] %></span><% end %>
+              <span class="cw-fix__why"><%= issue[:explanation] %></span>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </details>
+  <% end %>
+
+  <%= form_with model: item, url: submission_item_path(item.submission_id, item), method: :patch,
+        class: "cw-mcard__foot no-print", data: { controller: "stepper", stepper_max_value: item.max_points.to_f, stepper_step_value: Grading::STEP } do |f| %>
+    <% if item.adjusted_by_teacher? %>
+      <span class="flex items-center gap-3">
+        <%= status_dot("Ajustada · IA deu #{points(item.ai_points)}", :purple, class: "text-[0.8rem]!") %>
+        <button type="submit" name="reset" value="1" class="cw-link-btn cw-link-btn--muted" title="Voltar para a nota da IA"><%= icon(:refresh) %> Desfazer</button>
+      </span>
+    <% else %>
+      <span class="cw-text-muted" style="font-size:.8rem">Nota sugerida pela IA</span>
+    <% end %>
+    <span class="cw-stepper">
+      <button type="button" data-action="stepper#decrement" aria-label="Diminuir meio ponto">−</button>
+      <%= f.number_field :teacher_points, value: item.effective_points.to_f.to_s.delete_suffix(".0"), step: Grading::STEP, min: 0, max: item.max_points.to_f,
+            data: { stepper_target: "input", action: "input->stepper#changed" }, "aria-label": "Nota de #{item.title}" %>
+      <button type="button" data-action="stepper#increment" aria-label="Aumentar meio ponto">+</button>
+    </span>
+  <% end %>
+</article>

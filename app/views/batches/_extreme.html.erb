@@ -1,0 +1,11 @@
+<%# Maior/menor nota com o nome do(s) aluno(s). Empates: mostra o primeiro e "+N". %>
+<div class="cw-extreme">
+  <dt class="cw-ico-text"><%= icon(icon_name) %> <%= label %></dt>
+  <dd>
+    <% if students.any? %>
+      <%= link_to students.first.display_name, submission_path(students.first), class: "cw-extreme__name", title: students.map(&:display_name).join(", ") %>
+      <% if students.size > 1 %><span class="cw-text-muted" title="<%= students.drop(1).map(&:display_name).join(", ") %>">+<%= students.size - 1 %></span><% end %>
+    <% end %>
+    <span class="cw-extreme__score"><%= points(score) %></span>
+  </dd>
+</div>

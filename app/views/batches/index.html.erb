@@ -1,0 +1,114 @@
+<% content_for :title, "Turmas" %>
+<% breadcrumbs([ "Turmas" ]) %>
+
+<header class="cw-mhead">
+  <div class="cw-mhead__lead">
+    <span class="cw-mhead__icon"><%= icon(:users) %></span>
+    <div>
+      <h1 class="cw-mhead__title">Turmas</h1>
+      <p class="cw-mhead__sub"><%= pluralize(@batches.size, "turma", plural: "turmas") %> · <%= pluralize(@batches.sum { _1.submissions.size }, "prova", plural: "provas") %></p>
+    </div>
+  </div>
+  <button type="button" class="cw-btn cw-btn--teal cw-btn--sm" data-controller="dialog-opener" data-action="dialog-opener#open" data-dialog-opener-id-value="new-batch">
+    <%= icon(:plus) %> Nova correção
+  </button>
+</header>
+
+<% if @batches.empty? %>
+  <div class="cw-mlist">
+    <div class="cw-empty">
+      <span class="cw-empty__icon"><%= icon(:files) %></span>
+      <h2 class="cw-empty__title">Nenhuma turma ainda</h2>
+      <p class="cw-empty__text">Crie uma turma, arraste as provas dos alunos e a IA corrige cada uma. Você revisa e ajusta as notas.</p>
+      <button type="button" class="cw-btn cw-btn--teal cw-btn--sm" data-controller="dialog-opener" data-action="dialog-opener#open" data-dialog-opener-id-value="new-batch">
+        <%= icon(:plus) %> Criar a primeira turma
+      </button>
+    </div>
+  </div>
+<% else %>
+  <% rows = @batches.map { |batch| [ batch, batch.stats ] } %>
+  <div class="cw-mlist">
+    <div class="hidden md:block">
+      <table class="cw-mtable">
+        <thead>
+          <tr>
+            <th>Turma</th>
+            <th>Corrigidas</th>
+            <th class="is-num">Média</th>
+            <th class="hidden lg:table-cell">Conceitos</th>
+            <th class="hidden xl:table-cell">Atualizada</th>
+            <th><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.each do |batch, stats| %>
+            <tr data-controller="row-link" data-row-link-url-value="<%= batch_path(batch) %>" data-action="click->row-link#open">
+              <td>
+                <div class="cw-mitem">
+                  <span class="cw-mitem__icon" style="--tone: <%= tone_var(batch_tone(stats)) %>"><%= icon(:layers) %></span>
+                  <div class="cw-mitem__text">
+                    <%= link_to batch.name, batch, class: "cw-mname" %>
+                    <span class="cw-msub"><%= batch.activity.name %></span>
+                  </div>
+                </div>
+              </td>
+              <td><%= render "batches/progress", stats: stats %></td>
+              <td class="is-num"><span class="cw-score"><%= points(stats.average) %></span></td>
+              <td class="hidden lg:table-cell"><%= render "batches/distribution", stats: stats %></td>
+              <td class="hidden xl:table-cell"><span class="cw-ico-text"><%= icon(:clock) %> <%= time_ago_in_words(batch.updated_at) %></span></td>
+              <td class="is-tight"><%= render "batches/menu", batch: batch %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="cw-mrows md:hidden">
+      <% rows.each do |batch, stats| %>
+        <li data-controller="row-link" data-row-link-url-value="<%= batch_path(batch) %>" data-action="click->row-link#open">
+          <div class="cw-mrow__top">
+            <div class="cw-mitem flex-1">
+              <span class="cw-mitem__icon" style="--tone: <%= tone_var(batch_tone(stats)) %>"><%= icon(:layers) %></span>
+              <div class="cw-mitem__text">
+                <%= link_to batch.name, batch, class: "cw-mname" %>
+                <span class="cw-msub"><%= batch.activity.name %></span>
+              </div>
+            </div>
+            <%= render "batches/menu", batch: batch %>
+          </div>
+          <div class="cw-mrow__meta">
+            <%= render "batches/progress", stats: stats %>
+            <span>Média <span class="cw-score"><%= points(stats.average) %></span></span>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<dialog id="new-batch" class="cw-modal" data-controller="dialog" data-action="click->dialog#backdropClose" <%= "open" if @batch.errors.any? %>>
+  <%= form_with model: @batch, id: "new-batch-form" do |f| %>
+    <div class="cw-modal__head">
+      <div>
+        <h2 class="cw-modal__title">Nova correção</h2>
+        <p class="cw-modal__sub">Dê um nome para identificar a turma.</p>
+      </div>
+      <button type="button" class="cw-btn cw-btn--ghost cw-btn--icon" data-action="dialog#close" aria-label="Fechar"><%= icon(:x) %></button>
+    </div>
+    <div class="cw-modal__body cw-form">
+      <div>
+        <%= f.label :name, "Nome da turma", class: "cw-label" %>
+        <%= f.text_field :name, class: "cw-input", autofocus: true, required: true, placeholder: "Ex.: 2º ano B – Novembro" %>
+        <% if @batch.errors[:name].any? %><p class="cw-error">Informe um nome.</p><% end %>
+      </div>
+      <div>
+        <%= f.label :activity_id, "Atividade", class: "cw-label" %>
+        <%= f.collection_select :activity_id, Activity.order(:name), :id, :name, {}, class: "cw-input" %>
+      </div>
+    </div>
+    <div class="cw-modal__actions">
+      <button type="button" class="cw-btn cw-btn--secondary cw-btn--sm" data-action="dialog#close">Cancelar</button>
+      <%= f.button class: "cw-btn cw-btn--teal cw-btn--sm" do %>Criar e enviar provas <%= icon(:arrow_right) %><% end %>
+    </div>
+  <% end %>
+</dialog>

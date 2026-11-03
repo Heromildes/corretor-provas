@@ -1,0 +1,68 @@
+<div id="submission_body">
+  <% if submission.done? %>
+    <% if submission.overall_feedback.present? %>
+      <div class="cw-mremark">
+        <%= icon(:sparkles) %>
+        <p><strong>Visão geral da IA</strong><%= submission.overall_feedback %></p>
+      </div>
+    <% end %>
+
+    <% submission.items.group_by(&:kind).each do |kind, items| %>
+      <% table = kind == "table" %>
+      <section class="cw-msection">
+        <div class="cw-msection-head">
+          <h2><%= table ? "Tabela de habilidades" : "Perguntas pessoais" %> <small><%= items.size %> · <%= table ? "5 pontos cada" : "30 pontos cada" %></small></h2>
+          <% if table %>
+            <div class="cw-mlegend no-print">
+              <% SubmissionItem::ISSUE_KINDS.each do |k, label| %>
+                <%= status_dot(label, issue_tone(k)) %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        <div class="grid gap-3 <%= 'xl:grid-cols-2' if table %>">
+          <%= render partial: "submission_items/item", collection: items, as: :item %>
+        </div>
+      </section>
+    <% end %>
+
+  <% elsif submission.failed? %>
+    <div class="cw-mlist">
+      <div class="cw-empty cw-empty--danger">
+        <span class="cw-empty__icon"><%= icon(:circle_alert) %></span>
+        <h2 class="cw-empty__title">Não foi possível corrigir esta prova</h2>
+        <p class="cw-empty__text"><%= submission.error_message.presence || "Erro desconhecido." %></p>
+        <%= button_to regrade_submission_path(submission), class: "cw-btn cw-btn--teal cw-btn--sm" do %><%= icon(:refresh) %> Tentar de novo<% end %>
+      </div>
+    </div>
+
+  <% else %>
+    <% steps = [ [ "queued", "Na fila", "Aguardando a vez" ], [ "reading", "Lendo a prova", "Extraindo texto e páginas" ], [ "grading", "Corrigindo com IA", "Avaliando cada bloco com a rubrica" ] ] %>
+    <% current = steps.index { _1.first == submission.status } || 0 %>
+    <div class="cw-msummary">
+      <ol class="cw-mtl">
+        <% steps.each_with_index do |(_, title, hint), index| %>
+          <li class="<%= 'is-pending' if index > current %>">
+            <span class="cw-mtl-node <%= index < current ? 'is-done' : ('is-current' if index == current) %>">
+              <%= index < current ? icon(:check) : (index == current ? icon(:loader, "animate-spin") : index + 1) %>
+            </span>
+            <div>
+              <div class="cw-mtl__title"><%= title %></div>
+              <div class="cw-mtl__hint"><%= hint %></div>
+            </div>
+          </li>
+        <% end %>
+      </ol>
+      <p class="cw-mtl__hint" style="margin:0">Pode continuar trabalhando: esta página se atualiza sozinha quando a correção terminar.</p>
+    </div>
+    <div class="grid gap-3 xl:grid-cols-2" style="margin-top:1rem">
+      <% 4.times do %>
+        <div class="cw-mcard">
+          <span class="cw-skel" style="display:block;width:45%;height:.9rem"></span>
+          <span class="cw-skel" style="display:block;width:100%;height:.7rem;margin-top:1rem"></span>
+          <span class="cw-skel" style="display:block;width:85%;height:.7rem;margin-top:.5rem"></span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

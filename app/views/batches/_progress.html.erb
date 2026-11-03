@@ -1,0 +1,4 @@
+<span class="cw-mprog <%= 'is-done' if stats.finished? && stats.failed.zero? %>">
+  <span class="cw-mprog__bar"><span style="width: <%= stats.progress %>%"></span></span>
+  <span class="tabular"><%= stats.done %>/<%= stats.total %></span>
+</span>

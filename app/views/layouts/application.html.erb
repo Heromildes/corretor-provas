@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <title><%= content_for(:title) ? "#{content_for(:title)} · Corretor" : "Corretor" %></title>
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+    <%= render "layouts/head" %>
+    <%= yield :head %>
+  </head>
+
+  <body class="cw-v2">
+    <div class="cw-main">
+      <header class="cw-topbar">
+        <%= link_to root_path, class: "cw-brand", title: "Turmas" do %>
+          <span class="cw-logo"><%= icon(:logo) %></span>
+          <span class="hidden sm:block">
+            <span class="cw-brand__name">Corretor</span><br>
+            <span class="cw-brand__org">Instituto Ivoti</span>
+          </span>
+        <% end %>
+        <span class="cw-topbar__divider"></span>
+        <nav class="cw-crumbs" aria-label="Você está em"><%= yield(:breadcrumbs).presence || tag.span("Turmas", "aria-current": "page") %></nav>
+
+        <div class="cw-topbar__right">
+          <button type="button" class="cw-btn cw-btn--ghost cw-btn--icon" data-controller="theme" data-action="theme#toggle" aria-label="Alternar tema claro/escuro" title="Tema claro/escuro">
+            <span class="hidden dark:inline"><%= icon(:sun) %></span><span class="dark:hidden"><%= icon(:moon) %></span>
+          </button>
+          <details class="cw-menu cw-usermenu" data-controller="menu">
+            <summary aria-label="Minha conta">
+              <span class="cw-avatar"><%= current_user.initials %></span>
+              <span class="cw-usermenu__name hidden sm:inline"><%= current_user.display_name %></span>
+            </summary>
+            <div class="cw-menu__panel">
+              <div class="cw-menu__head"><%= current_user.email %></div>
+              <div class="cw-menu__sep"></div>
+              <%= button_to destroy_user_session_path, method: :delete, class: "cw-menu__item", data: { turbo: false } do %><%= icon(:log_out) %> Sair<% end %>
+            </div>
+          </details>
+        </div>
+      </header>
+
+      <div id="toasts" class="cw-toasts">
+        <% flash.each do |type, message| %>
+          <%= render "shared/toast", message: message, type: type %>
+        <% end %>
+      </div>
+
+      <main class="cw-mpage">
+        <%= yield %>
+      </main>
+    </div>
+  </body>
+</html>
