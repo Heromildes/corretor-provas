@@ -12,6 +12,9 @@ class GradeSubmissionJobTest < ActiveSupport::TestCase
     assert_equal 36.5, submission.items.where(kind: "table").sum(:ai_points)
     assert_equal 0, submission.items.where(kind: "open").sum(:ai_points)
     assert_equal "NS", submission.concept
+    teamwork = submission.items.find_by!(key: "teamwork")
+    assert_equal 3.5, teamwork.ai_points
+    assert_equal [ 1.0, 1.5, 0.5, 0.5 ], teamwork.criteria.map { _1["points"] }
     assert_includes submission.extracted_text, "Chris"
   end
 

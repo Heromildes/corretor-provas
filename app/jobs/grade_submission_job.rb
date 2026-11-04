@@ -23,7 +23,7 @@ class GradeSubmissionJob < ApplicationJob
   def perform(submission)
     submission.reload.update!(status: "reading", error_message: nil)
 
-    PageExtractor.new(submission.file).call do |extracted|
+    PageExtractor.new(submission.files).call do |extracted|
       ensure_still_exists!(submission)
       attach_pages(submission, extracted.images)
       submission.update!(status: "grading", extracted_text: extracted.text)

@@ -1,19 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 
 const ACCEPTED = /\.(pdf|jpe?g|png|webp|heic|heif)$/i
-const PARALLEL = 3
+const MAX_FILES = 8
+const MAX_SIZE = 25 * 1024 * 1024
 
-// Arrastar-e-soltar com envio em paralelo e barra de progresso por arquivo.
-// Cada arquivo vira uma prova; a linha do aluno aparece na lista via Turbo Stream.
+// Arrastar-e-soltar: cada envio (todos os arquivos soltos/escolhidos de uma vez) é UM aluno —
+// por exemplo, a foto da frente e a do verso. Os arquivos vão juntos numa única requisição e a
+// linha do aluno aparece na lista via Turbo Stream.
 export default class extends Controller {
   static targets = ["zone", "input", "list"]
   static values = { url: String }
 
-  connect() {
-    this.queue = []
-    this.active = 0
-    this.depth = 0
-  }
+  connect() { this.depth = 0 }
 
   enter(event) {
     event.preventDefault()
@@ -33,11 +31,11 @@ export default class extends Controller {
     event.preventDefault()
     this.depth = 0
     this.highlight(false)
-    this.add(event.dataTransfer.files)
+    this.send(event.dataTransfer.files)
   }
 
   pick() {
-    this.add(this.inputTarget.files)
+    this.send(this.inputTarget.files)
     this.inputTarget.value = ""
   }
 
@@ -45,50 +43,40 @@ export default class extends Controller {
     this.zoneTarget.classList.toggle("is-over", on)
   }
 
-  add(fileList) {
-    Array.from(fileList).forEach((file) => {
-      const row = this.row(file)
-      if (!ACCEPTED.test(file.name)) return this.finish(row, false, "Formato não suportado")
-      if (file.size > 25 * 1024 * 1024) return this.finish(row, false, "Arquivo maior que 25 MB")
-      this.queue.push({ file, row })
-    })
-    this.pump()
-  }
+  send(fileList) {
+    // Ordem natural do nome (IMG_2 antes de IMG_10) = normalmente frente antes do verso.
+    const files = Array.from(fileList).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    if (files.length === 0) return
 
-  pump() {
-    while (this.active < PARALLEL && this.queue.length) {
-      const job = this.queue.shift()
-      this.active++
-      this.upload(job).finally(() => { this.active--; this.pump() })
+    const row = this.row(files)
+    const invalid = files.find((f) => !ACCEPTED.test(f.name))
+    if (invalid) return this.finish(row, false, `Formato não suportado: ${invalid.name}`)
+    const big = files.find((f) => f.size > MAX_SIZE)
+    if (big) return this.finish(row, false, `Maior que 25 MB: ${big.name}`)
+    if (files.length > MAX_FILES) return this.finish(row, false, `Máximo de ${MAX_FILES} arquivos por aluno`)
+
+    const xhr = new XMLHttpRequest()
+    const data = new FormData()
+    files.forEach((file) => data.append("files[]", file))
+    xhr.open("POST", this.urlValue)
+    xhr.setRequestHeader("X-CSRF-Token", document.querySelector("meta[name=csrf-token]")?.content)
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) this.progress(row, Math.round((e.loaded / e.total) * 100))
     }
+    xhr.onload = () => {
+      const ok = xhr.status >= 200 && xhr.status < 300
+      let message = "Enviado · na fila da IA"
+      if (!ok) {
+        try { message = JSON.parse(xhr.responseText).error } catch { message = "Falha no envio" }
+      }
+      this.finish(row, ok, message)
+    }
+    xhr.onerror = () => this.finish(row, false, "Sem conexão")
+    xhr.send(data)
   }
 
-  upload({ file, row }) {
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest()
-      const data = new FormData()
-      data.append("file", file)
-      xhr.open("POST", this.urlValue)
-      xhr.setRequestHeader("X-CSRF-Token", document.querySelector("meta[name=csrf-token]")?.content)
-      xhr.setRequestHeader("Accept", "application/json")
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) this.progress(row, Math.round((e.loaded / e.total) * 100))
-      }
-      xhr.onload = () => {
-        let message = "Enviado · na fila da IA"
-        let ok = xhr.status >= 200 && xhr.status < 300
-        if (!ok) {
-          try { message = JSON.parse(xhr.responseText).error } catch { message = "Falha no envio" }
-        }
-        this.finish(row, ok, message)
-        resolve()
-      }
-      xhr.onerror = () => { this.finish(row, false, "Sem conexão"); resolve() }
-      xhr.send(data)
-    })
-  }
-
-  row(file) {
+  row(files) {
     const li = document.createElement("li")
     li.className = "cw-upload"
     li.innerHTML = `
@@ -98,11 +86,12 @@ export default class extends Controller {
       <div class="cw-upload__body">
         <div class="cw-upload__row">
           <span class="cw-upload__name" data-role="name"></span>
-          <span class="cw-upload__status" data-role="status">Aguardando…</span>
+          <span class="cw-upload__status" data-role="status">Enviando…</span>
         </div>
         <div class="cw-upload__bar"><span data-role="bar"></span></div>
       </div>`
-    li.querySelector("[data-role=name]").textContent = file.name
+    const label = files.length === 1 ? files[0].name : `1 aluno · ${files.length} arquivos: ${files.map((f) => f.name).join(", ")}`
+    li.querySelector("[data-role=name]").textContent = label
     this.listTarget.appendChild(li)
     return li
   }

@@ -18,7 +18,7 @@ class FlowTest < ActionDispatch::IntegrationTest
 
     file = fixture_file_upload(ANSWERED_PDF, "application/pdf")
     assert_enqueued_with(job: GradeSubmissionJob) do
-      post batch_submissions_path(batch), params: { file: file }, as: :multipart_form
+      post batch_submissions_path(batch), params: { files: [ file ] }, as: :multipart_form
     end
     assert_response :created
     submission = batch.submissions.last
@@ -46,7 +46,7 @@ class FlowTest < ActionDispatch::IntegrationTest
 
   test "rejeita upload de formato inválido" do
     batch = Batch.create!(name: "T", activity: activity)
-    post batch_submissions_path(batch), params: { file: Rack::Test::UploadedFile.new(StringIO.new("x"), "text/plain", original_filename: "a.txt") }
+    post batch_submissions_path(batch), params: { files: [ Rack::Test::UploadedFile.new(StringIO.new("x"), "text/plain", original_filename: "a.txt") ] }
     assert_response :unprocessable_entity
   end
 
@@ -71,5 +71,24 @@ class FlowTest < ActionDispatch::IntegrationTest
     submission = create_submission
     Submission.find(submission.id).destroy
     assert_nothing_raised { with_fake_openai { GradeSubmissionJob.perform_now(submission) } }
+  end
+
+  test "várias fotos enviadas juntas viram um único aluno" do
+    batch = Batch.create!(name: "T", activity: activity)
+    Dir.mktmpdir do |dir|
+      front = fixture_file_upload(photo_of(ANSWERED_PDF, 1, dir), "image/jpeg")
+      back = fixture_file_upload(photo_of(ANSWERED_PDF, 2, dir), "image/jpeg")
+      assert_difference -> { batch.submissions.count }, 1 do
+        post batch_submissions_path(batch), params: { files: [ front, back ] }, as: :multipart_form
+      end
+    end
+    assert_response :created
+    submission = batch.submissions.last
+    assert_equal 2, submission.files.count
+    assert_equal "foto1-1.jpg, foto2-2.jpg", submission.original_filename
+
+    with_fake_openai { perform_enqueued_jobs(only: GradeSubmissionJob) }
+    assert_equal 2, submission.reload.pages.count
+    assert_equal "done", submission.status
   end
 end

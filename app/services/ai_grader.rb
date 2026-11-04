@@ -13,7 +13,7 @@ class AiGrader
   Result = Data.define(:student_name, :overall_feedback, :items) do
     def item(key)
       items.find { |i| i[:key] == key.to_s } ||
-        { key: key.to_s, page: nil, points: 0, transcription: "", feedback: "Resposta não encontrada na prova.", strengths: "", issues: [] }
+        { key: key.to_s, page: nil, criteria: [], transcription: "", feedback: "Resposta não encontrada na prova.", strengths: "", issues: [] }
     end
   end
 
@@ -39,6 +39,8 @@ class AiGrader
         { role: "developer", content: [ { type: "input_text", text: system_prompt } ] },
         { role: "user", content: user_content }
       ],
+      # Sem temperature neste modelo: mais raciocínio = notas mais consistentes entre correções.
+      reasoning: { effort: ENV.fetch("OPENAI_REASONING_EFFORT", "high") },
       text: { format: { type: "json_schema", name: "correcao_prova", strict: true, schema: schema } }
     }
   end
@@ -66,9 +68,14 @@ class AiGrader
       ITENS E RUBRICA (total #{@activity.total_points.to_i} pontos):
       #{rubric_text}
 
-      REGRAS DE CORREÇÃO
-      - Use passos de 0,5 ponto. Nunca ultrapasse o máximo do item.
-      - Em branco, ilegível ou fora do tema = 0 ponto, com feedback explicando.
+      COMO DAR A NOTA (siga à risca — a mesma prova deve receber sempre a mesma nota)
+      - Avalie CADA critério de cada item SEPARADAMENTE e escolha EXATAMENTE um dos níveis listados para ele
+        (o valor de "points" de cada critério tem de ser um desses níveis). NÃO dê uma nota geral ao item:
+        o sistema soma os critérios.
+      - Compare a resposta com a DESCRIÇÃO de cada nível, não com a sua impressão geral.
+      - Na dúvida entre dois níveis, escolha SEMPRE o MENOR.
+      - "reason": 1 frase em português com a evidência da resposta que justifica o nível escolhido.
+      - Em branco, ilegível ou fora do tema = nível 0 em todos os critérios, com feedback explicando.
       - "transcription": copie FIELMENTE o que o aluno escreveu naquele item, sem corrigir nada
         (mantenha erros de grafia e pontuação, mesmo óbvios). Se estiver em branco, use "".
       - As linhas pautadas da folha passam por baixo/através da escrita: isso NÃO é texto riscado.
@@ -77,7 +84,7 @@ class AiGrader
         exatamente como aparece, para ser destacado na tela. "kind" ∈ #{ISSUE_KINDS.join(", ")}.
         "explanation" em português (curta e didática). "suggestion" = trecho corrigido em inglês.
         Para conteúdo errado/insuficiente use kind "content" ou "incomplete".
-      - "feedback": 1 a 3 frases em português justificando a nota com base na rubrica.
+      - "feedback": 1 a 3 frases em português resumindo o que faltou para a nota máxima.
       - "strengths": o que o aluno fez bem (português, curto). Pode ser "" se nada.
       - "page": número da página (1, 2, ...) onde a resposta está.
       - "student_name": o nome escrito no campo "Aluno(a)", ou null se não houver.
@@ -106,9 +113,17 @@ class AiGrader
       lines = [ "- key \"#{item[:key]}\" | #{item[:title]} | máximo #{item[:max_points].to_i} pts" ]
       lines << "  Pergunta: #{item[:question]}" if item[:question]
       lines << "  Foco da habilidade: #{item[:focus]}" if item[:focus]
-      lines << "  Critérios: #{item[:criteria]}"
+      Array(item[:criteria]).each do |criterion|
+        levels = criterion[:levels].map { |l| "#{format_points(l[:points])} = #{l[:desc]}" }.join(" | ")
+        lines << "  Critério \"#{criterion[:key]}\" (#{criterion[:label]}): #{levels}"
+      end
+      lines << "  Observação: #{item[:notes]}" if item[:notes]
       lines.join("\n")
     end.join("\n")
+  end
+
+  def format_points(value)
+    value.to_d.to_s("F").sub(/\.0\z/, "")
   end
 
   def user_content
@@ -121,16 +136,30 @@ class AiGrader
   end
 
   def intro_text
-    if @text.to_s.gsub(/[_\s]/, "").length > 200
-      <<~TXT
-        Corrija a prova abaixo. Seguem o texto extraído do PDF (camada digital, confiável para a transcrição)
-        e as imagens das páginas (para conferir a posição de cada resposta e qualquer escrita à mão).
+    pages = @images.size
+    intro = <<~TXT
+      Corrija a prova de UM(A) aluno(a) abaixo. São #{pages} imagem(ns) — fotos ou páginas escaneadas da MESMA prova
+      (por exemplo, frente e verso). Elas podem estar fora de ordem: identifique cada página pelo conteúdo
+      (a página com o cabeçalho "Aluno(a)" e a tabela é a primeira) e junte tudo numa única correção.
+      "page" = número da imagem (1 a #{pages}) onde está cada resposta.
 
-        TEXTO EXTRAÍDO:
+      As respostas podem estar escritas À MÃO (letra cursiva ou de forma, a lápis ou caneta) ou digitadas.
+      Leia a letra com atenção, palavra por palavra. As IMAGENS são a fonte da verdade.
+      Fotos podem estar inclinadas, com sombra, com parte de outra folha ou objetos ao redor: ignore o que não for a prova.
+      Se uma palavra estiver ilegível, transcreva o que for possível e marque [ilegível] no lugar.
+    TXT
+
+    if @text.to_s.gsub(/[_\s]/, "").length > 200
+      intro + <<~TXT
+
+        Também há uma camada de texto extraída de PDF. Use-a só como APOIO: ela pode conter apenas o texto impresso
+        da folha ou um OCR imperfeito da escrita à mão. Se ela divergir do que se vê nas imagens, siga as imagens.
+
+        TEXTO EXTRAÍDO DO PDF:
         #{@text}
       TXT
     else
-      "Corrija a prova abaixo. O arquivo é uma foto ou escaneamento: leia com atenção a escrita (inclusive à mão) nas imagens."
+      intro
     end
   end
 
@@ -147,12 +176,24 @@ class AiGrader
           items: {
             type: "object",
             additionalProperties: false,
-            required: %w[key page transcription points feedback strengths issues],
+            required: %w[key page transcription criteria feedback strengths issues],
             properties: {
               key: { type: "string", enum: @activity.rubric_items.map { |i| i[:key] } },
               page: { type: [ "integer", "null" ] },
               transcription: { type: "string" },
-              points: { type: "number" },
+              criteria: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: %w[key points reason],
+                  properties: {
+                    key: { type: "string", enum: criterion_keys },
+                    points: { type: "number" },
+                    reason: { type: "string" }
+                  }
+                }
+              },
               feedback: { type: "string" },
               strengths: { type: "string" },
               issues: {
@@ -174,6 +215,10 @@ class AiGrader
         }
       }
     }
+  end
+
+  def criterion_keys
+    @activity.rubric_items.flat_map { |i| Array(i[:criteria]).map { |c| c[:key] } }.uniq
   end
 
   # ---------- HTTP ----------

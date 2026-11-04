@@ -7,6 +7,25 @@ class PageExtractorTest < ActiveSupport::TestCase
     Upload.new(ActiveStorage::Blob.create_and_upload!(io: File.open(path), filename: File.basename(path), content_type: content_type))
   end
 
+  test "frente e verso em fotos separadas viram uma prova só, na ordem do envio" do
+    Dir.mktmpdir do |dir|
+      front, back = photo_of(ANSWERED_PDF, 1, dir), photo_of(ANSWERED_PDF, 2, dir)
+      PageExtractor.new([ upload(front, "image/jpeg"), upload(back, "image/jpeg") ]).call do |result|
+        assert_equal 2, result.images.size
+        assert_not result.text_layer?
+      end
+    end
+  end
+
+  test "mistura PDF e foto do mesmo aluno" do
+    Dir.mktmpdir do |dir|
+      PageExtractor.new([ upload(BLANK_PDF, "application/pdf"), upload(photo_of(ANSWERED_PDF, 1, dir), "image/jpeg") ]).call do |result|
+        assert_equal 3, result.images.size
+        assert result.text_layer?
+      end
+    end
+  end
+
   test "PDF digitado: extrai texto e gera uma imagem por página" do
     PageExtractor.new(upload(ANSWERED_PDF, "application/pdf")).call do |result|
       assert result.text_layer?
@@ -41,11 +60,11 @@ class PageExtractorTest < ActiveSupport::TestCase
   test "PDF com páginas demais (turma inteira num arquivo) é recusado" do
     Dir.mktmpdir do |dir|
       many = File.join(dir, "turma.pdf")
-      system("pdfunite", *([ ANSWERED_PDF.to_s ] * 4), many, exception: true)
+      system("pdfunite", *([ ANSWERED_PDF.to_s ] * 5), many, exception: true)
       error = assert_raises(PageExtractor::Error) do
         PageExtractor.new(upload(many, "application/pdf")).call { flunk "não deveria chegar aqui" }
       end
-      assert_match "8 páginas", error.message
+      assert_match "mais de 8 páginas", error.message
     end
   end
 end

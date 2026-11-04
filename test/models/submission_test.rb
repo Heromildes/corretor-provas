@@ -3,9 +3,9 @@ require "test_helper"
 class SubmissionTest < ActiveSupport::TestCase
   test "rejeita arquivos que não são PDF ou imagem" do
     batch = Batch.create!(name: "T", activity: activity)
-    submission = batch.submissions.new(file: { io: StringIO.new("oi"), filename: "nota.txt", content_type: "text/plain" })
+    submission = batch.submissions.new(files: [ { io: StringIO.new("oi"), filename: "nota.txt", content_type: "text/plain" } ])
     assert_not submission.valid?
-    assert submission.errors[:file].any?
+    assert submission.errors[:files].any?
   end
 
   test "nota ajustada pela professora recalcula total e conceito" do
@@ -38,9 +38,9 @@ class SubmissionTest < ActiveSupport::TestCase
 
   test "rejeita arquivo maior que o limite" do
     batch = Batch.create!(name: "T", activity: activity)
-    submission = batch.submissions.new(file: { io: StringIO.new("%PDF-1.4"), filename: "grande.pdf", content_type: "application/pdf" })
-    submission.file.blob.byte_size = Submission::MAX_FILE_SIZE + 1
+    submission = batch.submissions.new(files: [ { io: StringIO.new("%PDF-1.4"), filename: "grande.pdf", content_type: "application/pdf" } ])
+    submission.files.first.blob.byte_size = Submission::MAX_FILE_SIZE + 1
     assert_not submission.valid?
-    assert_match "25 MB", submission.errors[:file].to_sentence
+    assert_match "25 MB", submission.errors[:files].to_sentence
   end
 end

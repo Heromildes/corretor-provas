@@ -17,6 +17,19 @@
 
   <%= highlight_transcription(item) %>
 
+  <% if item.criteria.present? %>
+    <ul class="cw-crit" aria-label="Nota por critério">
+      <% item.criteria.each do |criterion| %>
+        <% pts, max = criterion["points"].to_d, criterion["max"].to_d %>
+        <li>
+          <span class="cw-crit__label"><%= criterion["label"] %></span>
+          <span class="cw-crit__score <%= pts.zero? ? 'cw-text-danger' : (pts < max ? 'cw-text-warning' : '') %>"><%= points(pts) %><small>/<%= points(max) %></small></span>
+          <span class="cw-crit__why" title="<%= criterion["reason"] %>"><%= criterion["reason"] %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
   <% if item.feedback.present? %>
     <p class="cw-mnote"><%= item.feedback %></p>
   <% end %>

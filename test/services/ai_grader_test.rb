@@ -18,19 +18,23 @@ class AiGraderTest < ActiveSupport::TestCase
     user = body[:input].last[:content]
     assert user.any? { _1[:type] == "input_image" && _1[:image_url].start_with?("data:image/jpeg;base64,") }
     assert_includes body[:input].first[:content].first[:text], "máximo 30 pts"
+    assert_includes body[:input].first[:content].first[:text], "Na dúvida entre dois níveis, escolha SEMPRE o MENOR"
+    assert_equal "high", body.dig(:reasoning, :effort)
+    criteria_schema = item_schema.dig(:properties, :criteria, :items)
+    assert_includes criteria_schema.dig(:properties, :key, :enum), "justificativa"
   end
 
   test "interpreta a resposta da OpenAI" do
     result = with_fake_openai { grader.call }
     assert_equal 10, result.items.size
-    assert_equal 5, result.item(:career_development)[:points]
+    assert_equal 4, result.item(:career_development)[:criteria].size
     assert_equal "", result.item(:strongest)[:transcription]
     assert_nil result.student_name
   end
 
   test "item ausente vira zero" do
     result = AiGrader::Result.new(student_name: nil, overall_feedback: "", items: [])
-    assert_equal 0, result.item(:teamwork)[:points]
+    assert_equal [], result.item(:teamwork)[:criteria]
   end
 
   test "sem chave configurada" do

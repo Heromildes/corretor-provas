@@ -1,8 +1,14 @@
 <div id="submission_pages" class="cw-pages" style="width:100%">
   <div class="cw-pages__head">
     <span class="cw-ico-text"><%= icon(:file_text) %> Prova original</span>
-    <% if submission.file.attached? %>
-      <%= link_to rails_blob_path(submission.file, disposition: "inline"), target: "_blank", rel: "noopener", class: "cw-link-btn" do %>Abrir arquivo <%= icon(:arrow_right) %><% end %>
+    <% if submission.files.attached? %>
+      <span class="flex items-center gap-3">
+        <% submission.files.each_with_index do |file, index| %>
+          <%= link_to rails_blob_path(file, disposition: "inline"), target: "_blank", rel: "noopener", class: "cw-link-btn", title: file.filename.to_s do %>
+            <%= submission.files.size > 1 ? "Arquivo #{index + 1}" : "Abrir arquivo" %> <%= icon(:arrow_right) %>
+          <% end %>
+        <% end %>
+      </span>
     <% end %>
   </div>
   <div class="cw-pages__scroll" data-viewer-target="scroller">

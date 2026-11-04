@@ -1,11 +1,11 @@
 class SubmissionsController < ApplicationController
   before_action :set_submission, except: :create
 
-  # Recebe UM arquivo por requisição (o navegador envia vários em paralelo, com barra de progresso).
+  # Um envio = um aluno: todos os arquivos (frente, verso, várias fotos ou PDFs) viram uma única prova.
   def create
     batch = Batch.find(params[:batch_id])
-    file = params.expect(:file)
-    submission = batch.submissions.new(file: file, original_filename: file.original_filename)
+    uploads = Array(params.expect(files: []))
+    submission = batch.submissions.new(files: uploads, original_filename: Submission.describe_files(uploads))
 
     if submission.save
       submission.start!

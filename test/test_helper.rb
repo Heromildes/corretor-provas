@@ -18,12 +18,18 @@ module ActiveSupport
       end
     end
 
-    def create_submission(path: ANSWERED_PDF, content_type: "application/pdf")
+    def create_submission(path: ANSWERED_PDF, content_type: "application/pdf", paths: nil)
       batch = Batch.create!(name: "Turma teste", activity: activity)
-      batch.submissions.create!(
-        file: { io: File.open(path), filename: File.basename(path), content_type: content_type },
-        original_filename: File.basename(path)
-      )
+      files = (paths || [ [ path, content_type ] ]).map do |file_path, type|
+        { io: File.open(file_path), filename: File.basename(file_path), content_type: type }
+      end
+      batch.submissions.create!(files: files, original_filename: files.map { _1[:filename] }.join(", "))
+    end
+
+    # Gera uma "foto" JPG de uma página de um PDF (para simular foto de celular).
+    def photo_of(pdf, page, dir)
+      system("pdftoppm", "-r", "60", "-f", page.to_s, "-l", page.to_s, "-jpeg", pdf.to_s, File.join(dir, "foto#{page}"), exception: true)
+      Dir[File.join(dir, "foto#{page}*.jpg")].first
     end
 
     # Usa a resposta gravada da OpenAI em vez de chamar a API.

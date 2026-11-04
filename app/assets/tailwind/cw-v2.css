@@ -634,3 +634,16 @@ dialog.cw-lightbox img { display: block; width: min(1100px, 95vw); height: auto;
 .cw-glist[data-filter] > .cw-grow { border-bottom: 1px solid var(--cw-line); }
 .cw-filter-empty { margin: 0; padding: 2rem 1rem; text-align: center; font-size: 0.85rem; color: var(--cw-muted); }
 .cw-filter-empty[hidden] { display: none; }
+
+/* Nota por critério da rubrica (transparência: por que o aluno perdeu ponto) */
+.cw-crit { list-style: none; margin: 0.9rem 0 0; padding: 0; border-top: 1px solid var(--cw-line); }
+.cw-crit li { display: grid; grid-template-columns: minmax(0, 9.5rem) 3.25rem minmax(0, 1fr); align-items: baseline; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--cw-line); font-size: 0.8rem; }
+.cw-crit__label { color: var(--cw-ink-soft); font-weight: 500; }
+.cw-crit__score { font-weight: 600; color: var(--cw-ink); font-variant-numeric: tabular-nums; text-align: right; }
+.cw-crit__score small { font-weight: 500; color: var(--cw-muted); }
+.cw-crit__why { color: var(--cw-muted); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 639px) {
+  .cw-crit li { grid-template-columns: minmax(0, 1fr) auto; }
+  .cw-crit__why { grid-column: 1 / -1; white-space: normal; }
+}
+@media print { .cw-crit__why { white-space: normal; } }

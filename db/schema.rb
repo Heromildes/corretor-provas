@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_03_230531) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_04_002320) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -73,6 +73,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_03_230531) do
     t.integer "page_number"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "criteria", default: [], null: false
     t.index ["submission_id"], name: "index_submission_items_on_submission_id"
   end
 

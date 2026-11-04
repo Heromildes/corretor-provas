@@ -8,6 +8,7 @@ class Submission < ApplicationRecord
   }.freeze
 
   MAX_FILE_SIZE = 25.megabytes
+  MAX_FILES = 8
 
   ACCEPTED_TYPES = %w[
     application/pdf image/jpeg image/png image/webp image/heic image/heif
@@ -15,11 +16,12 @@ class Submission < ApplicationRecord
 
   belongs_to :batch, touch: true
   has_many :items, -> { order(:position) }, class_name: "SubmissionItem", dependent: :destroy, inverse_of: :submission
-  has_one_attached :file
+  # Todas as páginas/fotos/PDFs de UM aluno (ex.: frente e verso), na ordem do envio.
+  has_many_attached :files
   has_many_attached :pages
 
   validates :status, inclusion: { in: STATUSES.keys }
-  validate :file_is_supported, on: :create
+  validate :files_are_supported, on: :create
 
   delegate :activity, to: :batch
 
@@ -36,7 +38,12 @@ class Submission < ApplicationRecord
   def concept_label = Grading.label_for(concept)
 
   def display_name
-    student_name.presence || original_filename.to_s.sub(/\.[^.]+\z/, "").presence || "Aluno sem nome"
+    student_name.presence || original_filename.to_s.split(",").first.to_s.strip.sub(/\.[^.]+\z/, "").presence || "Aluno sem nome"
+  end
+
+  # Nomes dos arquivos enviados, para mostrar na lista (ex.: "frente.jpg, verso.jpg").
+  def self.describe_files(uploads)
+    uploads.map { |u| u.respond_to?(:original_filename) ? u.original_filename : u[:filename] }.compact.join(", ")
   end
 
   def section_points(kind)
@@ -68,6 +75,8 @@ class Submission < ApplicationRecord
       items.destroy_all
       activity.rubric_items.each_with_index do |rubric, index|
         answer = result.item(rubric[:key])
+        transcription = answer[:transcription].to_s.strip
+        criteria, points = Grading.score_criteria(rubric, answer[:criteria], blank: transcription.blank?)
         items.create!(
           key: rubric[:key],
           title: rubric[:title],
@@ -75,8 +84,9 @@ class Submission < ApplicationRecord
           max_points: rubric[:max_points],
           position: index,
           page_number: answer[:page],
-          ai_points: Grading.normalize_points(answer[:points], rubric[:max_points]),
-          transcription: answer[:transcription].to_s.strip,
+          ai_points: points,
+          criteria: criteria,
+          transcription: transcription,
           feedback: answer[:feedback],
           strengths: answer[:strengths],
           issues: answer[:issues]
@@ -102,13 +112,16 @@ class Submission < ApplicationRecord
 
   private
 
-  def file_is_supported
-    if !file.attached?
-      errors.add(:file, "é obrigatório")
-    elsif ACCEPTED_TYPES.exclude?(file.blob.content_type)
-      errors.add(:file, "precisa ser PDF ou imagem (JPG, PNG, HEIC)")
-    elsif file.blob.byte_size > MAX_FILE_SIZE
-      errors.add(:file, "é maior que #{MAX_FILE_SIZE / 1.megabyte} MB")
+  def files_are_supported
+    blobs = files.map(&:blob)
+    if blobs.empty?
+      errors.add(:files, "são obrigatórios")
+    elsif blobs.size > MAX_FILES
+      errors.add(:files, "são no máximo #{MAX_FILES} por aluno")
+    elsif (bad = blobs.find { |b| ACCEPTED_TYPES.exclude?(b.content_type) })
+      errors.add(:files, "precisam ser PDF ou imagem (JPG, PNG, HEIC): #{bad.filename}")
+    elsif (big = blobs.find { |b| b.byte_size > MAX_FILE_SIZE })
+      errors.add(:files, "não podem passar de #{MAX_FILE_SIZE / 1.megabyte} MB cada: #{big.filename}")
     end
   end
 
